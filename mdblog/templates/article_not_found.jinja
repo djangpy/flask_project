@@ -1,0 +1,16 @@
+
+{% extends "_main.jinja" %}
+
+{% block title %}
+  Article not found
+{% endblock  %}
+
+{% block main %}
+    <h1>OOOPS</h1>
+    <h2>This article doesnt exist</h2>
+    <p>Unfortunately this article with id "{{ art_id}}" deosnt exist :(</p>
+    <div>
+        <a href="/" class="btn btn-primary btn/lg"> HOME </a>
+        <a href={{ url_for("view_articles_page") }} class="btn btn-default btn=lg"> All Articles</a>
+    </div>
+{% endblock  %}
