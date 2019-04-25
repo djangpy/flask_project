@@ -6,14 +6,15 @@
 
 {% block main %} 
     <form method="post" action="{{ url_for('login_user') }}">
-        <div class="form-group">
-            <label for="username">Email Username</label>
-            <input type="username" class="form-control" name="username"  placeholder="Enter username">
-        </div>
-        <div class="form-group">
-            <label for="password">Email password</label>
-            <input type="password" class="form-control" name="password"  placeholder="Enter password">
-        </div>
-        <button type="submit" value="login" class="btn btn-primary">Submit</button>
+    {{ form.csrf_token }}
+    <p>
+        {{ form.username.label }}
+        {{ form.username() }}
+    </p>
+    <p>
+        {{ form.password.label }}
+        {{ form.password() }}
+    </p>
+    <input type="submit" value="login">
     </form>
 {% endblock %}
