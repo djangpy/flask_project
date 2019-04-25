@@ -5,7 +5,7 @@ from flask import redirect
 from flask import url_for
 from flask import session
 from flask import g
-
+from flask import flash
 import sqlite3
 import os
 
@@ -13,6 +13,8 @@ flask_app = Flask(__name__)
 
 flask_app.config.from_pyfile("/vagrant/configs/default.py")
 
+# ak sa nachadza env premenna mdblog_config v operac. syst environ 
+# flask_app si pozrie automaticky configuracny subor MDBLOG_CONFIG kde je cesta k suboru a pouzije na dokonfigurovanie
 if "MDBLOG_CONFIG" in os.environ:
 	flask_app.config.from_envvar("MDBLOG_CONFIG")
 
@@ -37,11 +39,13 @@ def view_add_articles_page():
 	cur = db.execute("insert into articles (title, content) values (?, ?)",
 				[request.form.get("title"), request.form.get("content")])
 	db.commit() #zapise do db
+	flash("Article was saved", "alert-success")
 	return redirect(url_for("view_articles_page"))
 
 @flask_app.route("/admin/")
 def view_admin_page():
 	if "logged" not in session:
+		flash("You must be logged in", "alert-danger")
 		return redirect(url_for('view_login'))
 	return render_template("admin.jinja")
 
@@ -66,13 +70,16 @@ def login_user():
 		if username == flask_app.config["USERNAME"] and \
 			 	password == flask_app.config["PASSWORD"]:
 			session["logged"]=True
+			flash("Login successful", "alert-success")
 			return redirect(url_for('view_admin_page'))
 		else:
+			flash("Invalid credentials", "alert-danger")
 			return redirect(url_for('view_login'))
 
 @flask_app.route("/logout/", methods=["POST"])
 def logout_user():
 	session.pop("logged")
+	flash("Logout successful", "alert-success")
 	return redirect(url_for("view_velcome_page"))
 
 ## UTILS
