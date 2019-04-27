@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block main %} 
-    <form method="post" action="{{ url_for('login_user') }}">
+    <form method="post" action="{{ url_for('admin.login_user') }}">
     {{ form.csrf_token }}
     <p>
         {{ form.username.label }}
