@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 
-    {% include "layout/_head.jinja" %}
+    {% include "layout/_head.html" %}
 
   {% with messages=get_flashed_messages(with_categories=True) %}
     {% if messages %}
@@ -20,7 +20,7 @@
         <h1 class="text-center">Welcome to blog website</h1>
     </header>
   
-    {% include "layout/_nav.jinja" %}
+    {% include "layout/_nav.html" %}
 
     <main>
         {% block main %}
@@ -32,7 +32,7 @@
         (c) Martin Baliak
     </footer>
       
-      {% include "layout/_foot.jinja" %}
+      {% include "layout/_foot.html" %}
    
   </body>
 </html>
