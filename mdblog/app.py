@@ -15,6 +15,7 @@ from wtforms.validators import InputRequired
 
 from .models import db
 from .models import Article
+from .models import User
 
 import os
 
@@ -25,150 +26,192 @@ flask_app.config.from_pyfile("/vagrant/configs/default.py")
 # ak sa nachadza env premenna mdblog_config v operac. syst environ 
 # flask_app si pozrie automaticky configuracny subor MDBLOG_CONFIG kde je cesta k suboru a pouzije na dokonfigurovanie
 if "MDBLOG_CONFIG" in os.environ:
-    flask_app.config.from_envvar("MDBLOG_CONFIG")
+	flask_app.config.from_envvar("MDBLOG_CONFIG")
 
 db.init_app(flask_app)
 
 
 # FORMS
 class LoginForm(FlaskForm):
-    username = StringField("Username", validators=[InputRequired()])
-    password = PasswordField("Password", validators=[InputRequired()])
+	username = StringField("Username", validators=[InputRequired()])
+	password = PasswordField("Password", validators=[InputRequired()])
 
 
 class ArticleForm(FlaskForm):
-    title = StringField("Title", validators=[InputRequired()])
-    content = TextAreaField("Content")
+	title = StringField("Title", validators=[InputRequired()])
+	content = TextAreaField("Content")
+
+
+class ChangePasswordForm(FlaskForm):
+	old_password = PasswordField("Old Password", validators=[InputRequired()])
+	new_password = PasswordField("New Password", validators=[InputRequired()])
 
 
 # CONTROLLERS
 @flask_app.route("/")  # Dekorator spoji funkciu index s adresou
 def view_velcome_page():
-    return render_template("welcome_page.html", active='home')
+	return render_template("welcome_page.html", active='home')
 
 
 @flask_app.route("/about/")
 def view_about_page():
-    return render_template("about.html")
+	return render_template("about.html")
 
 
 # ARTICLES
 @flask_app.route("/articles/", methods=["GET"])
 def view_articles_page():
-    articles = Article.query.order_by(Article.id.desc())
-    return render_template("articles.html", articles=articles)
+	articles = Article.query.order_by(Article.id.desc())
+	return render_template("articles.html", articles=articles)
 
 
 @flask_app.route("/articles/new/", methods=["GET"])
 def view_add_article():
-    if "logged" not in session:
-        return redirect(url_for("view_login"))
-    form = ArticleForm()
-    return render_template("article_editor.html", form=form)
+	if "logged" not in session:
+		return redirect(url_for("view_login"))
+	form = ArticleForm()
+	return render_template("article_editor.html", form=form)
 
 
 @flask_app.route("/articles/", methods=["POST"])
 def add_article():
-    if "logged" not in session:
-        return redirect(url_for("view_login"))
+	if "logged" not in session:
+		return redirect(url_for("view_login"))
 
-    add_form = ArticleForm(request.form)
-    if add_form.validate():
-       new_article = Article(
-           title = add_form.title.data,
-           content = add_form.content.data)
-       db.session.add(new_article)
-       db.session.commit()
-       flash("Article was saved", "alert-success")
-       return redirect(url_for("view_articles_page"))
-    else:
-        for error in add_form.errors:
-            flash("{} is required".format(error), "alert-danger")
-        return render_template("article_editor.html", form=add_form)
+	add_form = ArticleForm(request.form)
+	if add_form.validate():
+		new_article = Article(
+			title=add_form.title.data,
+			content=add_form.content.data)
+		db.session.add(new_article)
+		db.session.commit()
+		flash("Article was saved", "alert-success")
+		return redirect(url_for("view_articles_page"))
+	else:
+		for error in add_form.errors:
+			flash("{} is required".format(error), "alert-danger")
+		return render_template("article_editor.html", form=add_form)
 
 
 @flask_app.route("/admin/")
 def view_admin_page():
-    if "logged" not in session:
-        flash("You must be logged in", "alert-danger")
-        return redirect(url_for('view_login'))
-    return render_template("admin.html")
+	if "logged" not in session:
+		flash("You must be logged in", "alert-danger")
+		return redirect(url_for('view_login'))
+	return render_template("admin.html")
 
 
 @flask_app.route("/articles/<int:art_id>")  # definujeme si premennu integer art_id
 def view_article_page(art_id):
-    article = Article.query.filter_by(id=art_id).first()
-    if article:
-        return render_template("article.html", article=article)
-    return render_template("article_not_found.html", art_id=art_id)
+	article = Article.query.filter_by(id=art_id).first()
+	if article:
+		return render_template("article.html", article=article)
+	return render_template("article_not_found.html", art_id=art_id)
 
 
 @flask_app.route("/articles/<int:art_id>/edit/", methods=["GET"])
 def view_article_editor(art_id):
-    if "logged" not in session:
-        return redirect(url_for("view_login"))
-    article = Article.query.filter_by(id=art_id).first()
-    if article:
-        form = ArticleForm()
-        form.title.data = article["title"]
-        form.content.data = article["content"]
-        return render_template("article_editor.html", form=form, article=article)
-    return render_template("article_not_found.html", art_id=art_id)
+	if "logged" not in session:
+		return redirect(url_for("view_login"))
+	article = Article.query.filter_by(id=art_id).first()
+	if article:
+		form = ArticleForm()
+		form.title.data = article["title"]
+		form.content.data = article["content"]
+		return render_template("article_editor.html", form=form, article=article)
+	return render_template("article_not_found.html", art_id=art_id)
 
 
 @flask_app.route("/articles/<int:art_id>/", methods=["POST"])
 def edit_article(art_id):
-    if "logged" not in session:
-        return redirect(url_for("view_login"))
-    article = Article.query.filter_by(id=art_id).first()
-    if article:
-        edit_form = ArticleForm(request.form)
-        if edit_form.validate():
-            article.title = edit_form.title.data
-            article.content = edit_form.content.data
-            db.session.add(article)
-            db.session.commit()
-            flash("Edit saved", "alert-success")
-            return redirect(url_for("view_article_page", art_id=art_id))
-        else:
-            for error in login_form.errors:
-                flash("{} is missing".format(error), "alert-danger")
-            return redirect(url_for("view_login"))
+	if "logged" not in session:
+		return redirect(url_for("view_login"))
+	article = Article.query.filter_by(id=art_id).first()
+	if article:
+		edit_form = ArticleForm(request.form)
+		if edit_form.validate():
+			article.title = edit_form.title.data
+			article.content = edit_form.content.data
+			db.session.add(article)
+			db.session.commit()
+			flash("Edit saved", "alert-success")
+			return redirect(url_for("view_article_page", art_id=art_id))
+		else:
+			for error in login_form.errors:
+				flash("{} is missing".format(error), "alert-danger")
+			return redirect(url_for("view_login"))
 
 
 @flask_app.route("/login/", methods=['GET'])
 def view_login():
-    login_form = LoginForm()
-    return render_template("login.html", form=login_form)
+	login_form = LoginForm()
+	return render_template("login.html", form=login_form)
 
 
 @flask_app.route("/login/", methods=["POST"])
 def login_user():
-    login_form = LoginForm(request.form)
-    if login_form.validate():
-        if login_form.username.data == flask_app.config["USERNAME"] and \
-                login_form.password.data == flask_app.config["PASSWORD"]:
-            session["logged"] = True
-            flash("Login successful", "alert-success")
-            return redirect(url_for("view_admin_page"))
-        else:
-            flash("Invalid credentials", "alert-danger")
-            return render_template("login.html", form=login_form)
-    else:
-        for error in login_form.errors:
-            flash("{} is missing".format(error), "alert-danger")
-        return redirect(url_for("view_login"))
+	login_form = LoginForm(request.form)
+	if login_form.validate():
+		user = User.query.filter_by(username=login_form.username.data).first()
+		if user and user.check_password(login_form.password.data):
+			session["logged"] = user.username
+			flash("Login successful", "alert-success")
+			return redirect(url_for("view_admin_page"))
+		else:
+			flash("Invalid credentials", "alert-danger")
+			return render_template("login.html", form=login_form)
+	else:
+		for error in login_form.errors:
+			flash("{} is missing".format(error), "alert-danger")
+		return redirect(url_for("view_login"))
+
+
+@flask_app.route("/changepassword/", methods=["GET"])
+def view_change_password():
+	if "logged" not in session:
+		return redirect(url_for("view_login"))
+	form = ChangePasswordForm()
+	return render_template("change_password.html", form=form)
+
+
+@flask_app.route("/changepassword/", methods=["POST"])
+def change_password():
+	if "logged" not in session:
+		return redirect(url_for("view_login"))
+	form = ChangePasswordForm(request.form)
+	if form.validate():
+		user = User.query.filter_by(username=session["logged"]).first()
+		if user and user.check_password(form.old_password.data):
+			user.set_password(form.new_password.data)
+			db.session.add(user)
+			db.session.commit()
+			flash("Password changed!", "alert-success")
+			return redirect(url_for("view_admin_page"))
+		else:
+			flash("Invalid credentials", "alert-danger")
+			return render_template("change_password.html", form=form)
+	else:
+		for error in form.errors:
+			flash("{} is missing".format(error), "alert-danger")
+		return render_template("change_password.html", form=form)
 
 
 @flask_app.route("/logout/", methods=["POST"])
 def logout_user():
-    session.pop("logged")
-    flash("Logout successful", "alert-success")
-    return redirect(url_for("view_velcome_page"))
+	session.pop("logged")
+	flash("Logout successful", "alert-success")
+	return redirect(url_for("view_velcome_page"))
 
 
 # CLII COMMAND
 def init_db(app):
-    with app.app_context():
-        db.create_all()
-        print("database inicialized")
+	with app.app_context():
+		db.create_all()
+		print("database inicialized")
+
+		default_user = User(username="admin")
+		default_user.set_passwrod("admin")
+
+		db.session.add(default_user)
+		db.session.commit()
+		print("default user was created")
